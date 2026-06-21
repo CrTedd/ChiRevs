@@ -1,0 +1,36 @@
+# systemd-сервис для ПОСТОЯННОГО SSH reverse-туннеля с ДОМАШНЕГО сервера на VPS.
+# Туннель пробрасывает локальный порт 8000 (домашний Docker) на порт 8001 VPS.
+#
+# Установка на ДОМАШНЕМ сервере:
+#   sudo apt install autossh
+#   sudo cp deploy/autossh-tunnel.service /etc/systemd/system/
+#   # отредактируйте User, VPS_USER и vps-ip ниже
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now autossh-tunnel
+#
+# Проверка:  systemctl status autossh-tunnel
+
+[Unit]
+Description=AutoSSH reverse tunnel home -> VPS
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+# Пользователь домашнего сервера, у которого есть SSH-ключ к VPS.
+User=ЗАМЕНИТЕ_НА_ПОЛЬЗОВАТЕЛЯ_ДОМА
+
+Environment=AUTOSSH_GATETIME=0
+# -N: не выполнять команд; -R: reverse-проброс 8001(VPS) <- 8000(дом).
+# Параметры ServerAlive* перезапускают туннель при обрыве связи.
+ExecStart=/usr/bin/autossh -M 0 -N \
+  -o "ServerAliveInterval=30" \
+  -o "ServerAliveCountMax=3" \
+  -o "ExitOnForwardFailure=yes" \
+  -R 127.0.0.1:8001:127.0.0.1:8000 \
+  ЗАМЕНИТЕ_VPS_USER@ЗАМЕНИТЕ_VPS_IP
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
